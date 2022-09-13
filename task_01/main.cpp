@@ -1,107 +1,108 @@
-#include <iostream>
-#include <pthread.h>
 #include <assert.h>
+#include <pthread.h>
 #include <sys/time.h>
 #include <iomanip>
+#include <iostream>
 
-struct thread_data
-{
-    unsigned thread_num;
-    unsigned num_threads;
-    double num_partition_intervals;
-    double x_start;
-    double x_end;
-    double result;
+struct thread_data {
+  unsigned thread_num;
+  unsigned num_threads;
+  unsigned num_iterations;
+  double x_start;
+  double x_end;
+  double result;
 };
 
-double calc_function(double x)
-{
-    return 4. / (1. + x*x);
+double calc_function(double x) {
+  return 4. / (1. + x * x);
 }
 
-void *
-job(void *arg)
-{
-    struct thread_data *p = (struct thread_data*) arg;
-    double x_step = (p->x_end - p->x_start) / (p->num_partition_intervals / p->num_threads);
+void* job(void* arg) {
+  struct thread_data* p = (struct thread_data*)arg;
+  double sum = 0;
+
+  if (p->num_iterations != 0) {
+    double x_step = (p->x_end - p->x_start) / (p->num_iterations);
     double x_current = p->x_start;
-    double x_end = p->x_end;
 
-    double sum = 0;
-
-    while(x_current + x_step < x_end)
-    {
-        sum += calc_function(x_current + x_step / 2) * x_step;
-        x_current += x_step;
+    for (int i = 0; i < p->num_iterations - 1; i++) {
+      sum += calc_function(x_current + x_step / 2) * x_step;
+      x_current += x_step;
     }
 
-    sum += calc_function(x_current + x_end) / 2. * (x_end - x_current);
-    p->result = sum;
-    return 0;
+    x_step = p->x_end - x_current;
+    sum += calc_function(x_current + x_step / 2) * x_step;
+  }
+
+  p->result = sum;
+  return 0;
 }
 
-int
-main(int argc, char **argv)
-{
-    struct timeval start_time;
-    gettimeofday(&start_time, NULL);
+int main(int argc, char** argv) {
+  struct timeval start_time;
+  gettimeofday(&start_time, NULL);
 
-    assert(argc >= 3 && "Insufficient number of parameters");
-    
-    unsigned num_partition_intervals = std::stoi(argv[1]);
-    unsigned num_threads = std::stoi(argv[2]);
+  assert(argc >= 3 &&
+         "Insufficient number of parameters. Usage: ./run <number of partition "
+         "intervals> <number of threads>");
 
-    assert(num_threads > 0 && "Threads number must be positive");
-    assert(num_partition_intervals > 0 && "Partition intervals number must be positive");
+  unsigned num_partition_intervals = std::stoi(argv[1]);
+  unsigned num_threads = std::stoi(argv[2]);
 
-    double x_start = 0;
-    double x_step = 1. / num_threads;
+  assert(num_threads > 0 && "Threads number must be positive");
+  assert(num_partition_intervals > 0 &&
+         "Partition intervals number must be positive");
 
-    pthread_t thrds[num_threads];
-    struct thread_data data[num_threads];
+  double x_start = 0;
+  double x_step = 1. / num_partition_intervals;
 
-    for(int i = 0; i < num_threads; i++)
-    {
-        data[i].thread_num = i;
-        data[i].num_threads = num_threads;
-        data[i].num_partition_intervals = num_partition_intervals;
-        data[i].result = 0;
-        data[i].x_start = x_start;
+  unsigned num_iterations = num_partition_intervals / num_threads;
+  unsigned num_iterations_residue = num_partition_intervals % num_threads;
 
-        if(i == num_threads - 1) 
-        {
-            x_start = 1;
-        }
-        else
-        {
-            x_start += x_step;
-        }
+  pthread_t thrds[num_threads];
+  struct thread_data data[num_threads];
 
-        data[i].x_end = x_start;
+  for (int i = 0; i < num_threads; i++) {
+    data[i].thread_num = i;
+    data[i].num_threads = num_threads;
+    data[i].num_iterations = num_iterations;
+    data[i].result = 0;
+    data[i].x_start = x_start;
 
-        assert(pthread_create(thrds + i, NULL,
-                              &job,
-                              (void *) (data + i)) == 0);
+    if (num_iterations_residue > 0) {
+      data[i].num_iterations++;
+      num_iterations_residue--;
     }
 
-    for(int i = 0; i < num_threads; i++)
-    {
-        pthread_join(thrds[i], NULL);
+    if (i == num_threads - 1) {
+      x_start = 1;
+    } else {
+      x_start += x_step * data[i].num_iterations;
     }
 
-    double my_pi = 0;
-    for(int i = 0; i < num_threads; i++)
-    {
-        my_pi += data[i].result;
-    }
+    data[i].x_end = x_start;
 
-    struct timeval end_time;
-    gettimeofday(&end_time, NULL);
+    assert(pthread_create(thrds + i, NULL, &job, (void*)(data + i)) == 0);
+  }
 
-    double elapsed_time = end_time.tv_sec - start_time.tv_sec + (end_time.tv_usec - start_time.tv_usec) / 1e6;
+  for (int i = 0; i < num_threads; i++) {
+    pthread_join(thrds[i], NULL);
+  }
 
-    std::cout << my_pi << std::endl;
-    std::cout << std::fixed << std::setprecision (6) << "Elapsed_time: " <<  elapsed_time << "s" << std::endl;
+  double my_pi = 0;
+  for (int i = 0; i < num_threads; i++) {
+    my_pi += data[i].result;
+  }
 
-    return 0;
+  struct timeval end_time;
+  gettimeofday(&end_time, NULL);
+
+  double elapsed_time = end_time.tv_sec - start_time.tv_sec +
+                        (end_time.tv_usec - start_time.tv_usec) / 1e6;
+
+  std::cout << my_pi << std::endl;
+  std::cout << std::fixed << std::setprecision(6)
+            << "Elapsed_time: " << elapsed_time << "s" << std::endl;
+
+  return 0;
 }
