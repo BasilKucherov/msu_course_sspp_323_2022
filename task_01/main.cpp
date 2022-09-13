@@ -5,8 +5,6 @@
 #include <iostream>
 
 struct thread_data {
-  unsigned thread_num;
-  unsigned num_threads;
   unsigned num_iterations;
   double x_start;
   double x_end;
@@ -63,8 +61,6 @@ int main(int argc, char** argv) {
   struct thread_data data[num_threads];
 
   for (int i = 0; i < num_threads; i++) {
-    data[i].thread_num = i;
-    data[i].num_threads = num_threads;
     data[i].num_iterations = num_iterations;
     data[i].result = 0;
     data[i].x_start = x_start;
