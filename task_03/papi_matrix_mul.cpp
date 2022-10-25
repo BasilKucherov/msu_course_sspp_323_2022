@@ -1,10 +1,21 @@
-#include <sys/time.h>
 #include <cassert>
 #include <fstream>
+#include <papi.h>
 #include <iostream>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+
+#define NUM_EVENTS 2
+
+void
+handle_error(int retval, const char *str)
+{
+    if (retval != PAPI_OK) {
+        std::cerr << str <<  ": PAPI error " << retval << ":" << PAPI_strerror(retval) << std::endl;
+        exit(1);
+    }
+}
 
 void read_matrix_from_file(int32_t** matrix,
                            int32_t* columns_number,
@@ -113,6 +124,9 @@ void multiply_matrices(int32_t* a,
 }
 
 int main(int argc, char** argv) {
+  int event_set = PAPI_NULL, retval;
+  long long values[NUM_EVENTS];
+
   assert(
       argc >= 5 &&
       "Usage: papi_matrix_mul <a_matrix> <b_matrix> <c_matrix> <mode>");
@@ -135,19 +149,25 @@ int main(int argc, char** argv) {
 
   std::memset(matrix_c, 0, n_elems * sizeof(int32_t));
 
-  struct timeval start_time;
-  gettimeofday(&start_time, NULL);
+  retval = PAPI_library_init(PAPI_VER_CURRENT);
+
+  if (retval != PAPI_VER_CURRENT) {
+      std::cerr << "PAPI library init error!" << std::endl;
+      exit(1);
+  }
+  handle_error(PAPI_create_eventset(&event_set), "create eventset");
+
+  handle_error(PAPI_add_event(event_set, PAPI_L1_DCM), "add PAPI_L1_DCM");
+  handle_error(PAPI_add_event(event_set, PAPI_L2_DCM), "add PAPI_L2_DCM");
+  
+  handle_error(PAPI_start(event_set), "papi start");
 
   multiply_matrices(matrix_a, matrix_b, matrix_c, c_columns_number, mode);
 
-  struct timeval end_time;
-  gettimeofday(&end_time, NULL);
+  handle_error(PAPI_stop(event_set, values), "papi stop");
 
-  double elapsed_time = end_time.tv_sec - start_time.tv_sec +
-                        (end_time.tv_usec - start_time.tv_usec) / 1e6;
-
-  std::cout << std::fixed << std::setprecision(6)
-            << "Elapsed_time: " << elapsed_time << "s" << std::endl;
+  std::cout << "PAPI_L1_DCM = " << values[0] << std::endl;
+  std::cout << "PAPI_L2_DCM = " << values[1] << std::endl;
 
   write_matrix_to_file(matrix_c, c_columns_number, argv[3]);
 
