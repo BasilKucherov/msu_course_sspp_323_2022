@@ -2,6 +2,9 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
+#include <cstring>
+
 
 void read_matrix_from_file(int32_t** matrix,
                            int32_t* columns_number,
@@ -131,6 +134,10 @@ int main(int argc, char** argv) {
             << "Elapsed_time: " << elapsed_time << "s" << std::endl;
 
   write_matrix_to_file(matrix_c, c_columns_number, argv[3]);
+
+  delete[] matrix_a;
+  delete[] matrix_b;
+  delete[] matrix_c;
 
   return 0;
 }

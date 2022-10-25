@@ -63,5 +63,7 @@ int main(int argc, char** argv) {
       generate_square_matrix(columns_number, rand_seed, max, negative);
   write_matrix_to_file(matrix, columns_number, file_name);
 
+  delete[] matrix;	
+
   return 0;
 }
