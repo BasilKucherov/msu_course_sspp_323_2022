@@ -85,6 +85,9 @@ void* job(void* arg) {
     (p->result).elements_number = elements_number;
 
     merge(data[0].result.array, data[0].result.elements_number, data[1].result.array, data[1].result.elements_number, (p->result).array);
+    
+    delete[] data[0].result.array;
+    delete[] data[1].result.array;
   }
 
 
