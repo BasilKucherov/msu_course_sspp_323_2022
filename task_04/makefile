@@ -1,6 +1,6 @@
 CC = g++
-LIBS = 
-CFLAGS = -Wall -Werror -std=gnu++11
+LIBS = -pthread
+CFLAGS = -Wall -Werror -O0 -std=gnu++11
 
 PROGS = is_sorted thread_merge_sort array_generator
 
