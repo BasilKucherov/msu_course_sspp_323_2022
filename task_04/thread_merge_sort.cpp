@@ -128,9 +128,6 @@ void write_array_to_file(int32_t* array,
 }
 
 int main(int argc, char** argv) {
-  struct timeval start_time;
-  gettimeofday(&start_time, NULL);
-
   assert(argc >= 4 &&
          "Insufficient number of parameters. Usage: ./thread_merge_sort <in_arr_file>  <out_arr_file> <number_of_threads>");
 
@@ -143,6 +140,9 @@ int main(int argc, char** argv) {
   int32_t elements_number;
   int32_t* array = read_array_from_file(&elements_number, in_arr_file);
   
+  struct timeval start_time;
+  gettimeofday(&start_time, NULL);
+
   struct chunk* chunks = new (std::nothrow) struct chunk[num_threads];
 
   for (int i = 0; i < num_threads; i++) {
