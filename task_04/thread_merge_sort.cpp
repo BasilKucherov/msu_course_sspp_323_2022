@@ -6,6 +6,7 @@
 #include <cstring>
 #include <cassert>
 #include <fstream>
+#include <algorithm>
 
 struct chunk {
   int32_t* array;
@@ -167,6 +168,10 @@ int main(int argc, char** argv) {
             << "Elapsed_time: " << elapsed_time << "s" << std::endl;
   
   write_array_to_file(data.result.array, data.result.elements_number, out_arr_file);
+
+  delete[] array;
+  delete[] data.result.array;
+  delete[] chunks;
 
   return 0;
 }
