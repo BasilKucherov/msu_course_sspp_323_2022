@@ -132,7 +132,7 @@ int main(int argc, char** argv) {
   gettimeofday(&start_time, NULL);
 
   assert(argc >= 4 &&
-         "Insufficient number of parameters. Usage: ./run <in_arr_file>  <out_arr_file> <number_of_threads>");
+         "Insufficient number of parameters. Usage: ./thread_merge_sort <in_arr_file>  <out_arr_file> <number_of_threads>");
 
   std::string in_arr_file = argv[1];
   std::string out_arr_file = argv[2];

@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 
   int32_t elements_number = std::atoi(argv[1]);
   std::string file_name = argv[2];
-  bool use_random_seed = (argc >= 3);
+  bool use_random_seed = (argc > 3);
   int random_seed = use_random_seed ? (std::atoi(argv[3])) : (0);
 
   int32_t* array = generate_array(elements_number, use_random_seed, random_seed);
