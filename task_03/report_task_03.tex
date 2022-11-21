@@ -1,0 +1,206 @@
+\documentclass[12pt,a4paper,oneside,final]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{graphicx} % \includegraphics
+\usepackage{indentfirst}
+\usepackage{hyperref}
+\usepackage[table,xcdraw]{xcolor}
+
+\oddsidemargin = 0cm
+\topmargin = -1.5cm
+\textwidth = 16cm
+\textheight = 24cm
+\parindent = 0.5cm
+
+\newcommand\Section[1]{
+  \refstepcounter{section}
+  \section*{\raggedright
+    \arabic{section}. #1}
+  \addcontentsline{toc}{section}{%
+    \arabic{section}. #1}
+}
+
+\newcommand\Subsection[1]{
+  \refstepcounter{subsection}
+  \subsection*{\raggedright
+    \arabic{section}.\arabic{subsection}. #1
+  }
+  \addcontentsline{toc}{subsection}{%
+    \arabic{section}.\arabic{subsection}. #1}
+}
+
+\newcommand\Subsubsection[1]{
+  \refstepcounter{subsubsection}
+  \subsubsection*{\raggedright
+    \arabic{section}.\arabic{subsection}.\arabic{subsubsection}. #1
+  }
+  \addcontentsline{toc}{subsubsection}{%
+    \arabic{section}.\arabic{subsection}.\arabic{subsubsection}. #1}
+}
+
+\sloppy
+
+\title{Задание 3 \\
+  Подсчёт количества промахов в кэш для операции матричного умножения в зависимости от порядка итерирования. \\
+  Отчёт}
+\author{Кучеров\,В.Д.}
+\date{2022}
+
+\begin{document}
+
+\maketitle
+
+\Section{Постановка задачи}
+
+
+При помощи PAPI снять значения аппаратных счетчиков промахов L1/L2 кэшей при выполнении оперции умножения квадратных матриц. Сравнить полученные значения с теоретическими для каждого порядка итерирования.
+
+\Section{Реализация}
+В ходе работы подготовлено две программы: \textbf{square\_matrix\_generator} и \textbf{papi\_matrix\_mul} для настраивомой случайной генерации квадратных матриц и перемножения матриц соответственно. Проверка корректности перемножения матриц производилась вручную с использованием стороннего ресурса - \url{https://www.wolframalpha.com/} .Формула для умножения матриц: \\
+\begin{center}
+{\Large$c_{ij}=\sum_{k=1}^{n}a_{ik} \cdot b_{kj},\quad i,j = 1,2,...,n.$} \\
+\end{center}
+
+Для подсчета количества промахов кэша использовалась библиотека $PAPI$, а именно события \textbf{PAPI\_L1\_DCM} (Level 1 data cache misses) и \textbf{PAPI\_L2\_DCM} (Level 2 data cache misses)
+
+\newpage
+\Section{Теоретический подсчет промахов кэша L1}
+
+\begin{enumerate}
+
+\item[1.] \textbf{ijk (jik)}
+
+\text{Доступ к элементам матрицы A происходит построчно, в кэш записывается {$\displaystyle\frac{\mbox{cache\_line\_size}}{\mbox{element\_size}}$} элементов, в проведенном исследовании  $cache\_line\_size = 128$ байт, $element\_size = 4$ байт, соответственно в одну линию кэша помещается $\frac{128}{4} = 32$ элемента. Значит промах кэша будет происходить на каждый 32-й доступ к элементу матрицы A. Доступ к элементам матрицы B происходит с шагом N - длина строки матрицы, соответственно при больших N промах кэша будет происходить при каждом чтении элемента B. Для фиксированного элемента матрицы C заведена временная переменная, поэтому промахов кэша не будет. Случай \textbf{jik} аналогичен, только A и B меняются местами, но суммарное число промахов не изменится.
+
+}
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+                                           & A       & B       & C    & Всего   \\ \hline
+Количество промахов на одну итерацию (ijk) & 0,03125 & 1,00    & 0,00 & 1,03125 \\ \hline
+Количество промахов на одну итерацию (jik) & 1,00    & 0,03125 & 0,00 & 1,03125 \\ \hline
+\end{tabular}
+\end{center}
+\end{table}
+
+В случае матрицы размера 1000 общее число промахов будет $1,03125  * N^3 = 1,03125 * 1000^3 = 1,03125e9$
+
+\begin{center}
+\includegraphics[width=0.6\linewidth]{k.png}
+\label{fig:mpr}
+\end{center}
+
+\newpage
+\item[2.]  \textbf{ikj (kij)}
+Фиксированный элемент матрицы A, и построчный доступ к элементам матриц B и C. Соответственно, обращений к элементам матрицы A не будет во внутреннем цикле, а промахи кэша для B и C считаются так же как и в первом случае:  ${\displaystyle\frac{\mbox{cache\_line\_size}}{\mbox{element\_size}}} = \frac{128}{4} = 32$, а значит промахи будут при каждом 32-ом обращении к массивам B и C.
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+                                           & A & B       & C       & Всего  \\ \hline
+Количество промахов на одну итерацию (ikj) & 0 & 0,03125 & 0,03125 & 0,0625 \\ \hline
+Количество промахов на одну итерацию (kij) & 0 & 0,03125 & 0,03125 & 0,0625 \\ \hline
+\end{tabular}
+\end{center}
+\end{table}
+
+В случае матрицы размера 1000 общее число промахов будет $0,0625  * N^3 = 0,0625 * 1000^3 = 6,25e7$
+
+\begin{center}
+\includegraphics[width=0.6\linewidth]{j.png}
+\label{fig:mpr}
+\end{center}
+
+\item[3.]  \textbf{jki (kji)}
+Фиксированный элемент матрицы B и обращение по столбцам к матрицам A и C. Для матрицы B промахов не будет, а для матриц A и C при больших N промах кэша будет при кажом обращении к элементам этих матриц. 
+
+\begin{table}[h]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+                                           & A & B & C & Всего \\ \hline
+Количество промахов на одну итерацию (jki) & 1 & 0 & 1 & 2     \\ \hline
+Количество промахов на одну итерацию (kji) & 1 & 0 & 1 & 2     \\ \hline
+\end{tabular}
+\end{center}
+\end{table}
+
+В случае матрицы размера 1000 общее число промахов будет $2  * N^3 = 2 * 1000^3 = 2e9$
+
+\begin{center}
+\includegraphics[width=0.6\linewidth]{i.png}
+\label{fig:mpr}
+\end{center}
+
+\end{enumerate}
+
+
+
+\Section{Формат командной строки}
+
+\begin{verbatim}
+./papi_matrix_mul <файл матрицы а> <файл матрицы b> <файл матрицы c> <режим>
+\end{verbatim} 
+
+\textbf {режим}: выбор порядка итерирования:
+\begin{enumerate}
+\item[0.] ijk
+\item[1.] ikj
+\item[2.] kij
+\item[3.] jik
+\item[4.] jki
+\item[5.] kji
+\end{enumerate}
+
+
+\begin{verbatim}
+./square_matrix_generator  <количество строк/столбцов> <имя выходного файла>  
+                          <опц. зерно генерации> <опц. максимальное значение> 
+                          <опц. генерировать отрицательные числа> 
+\end{verbatim}
+
+\begin{enumerate}
+\item{\textbf{зерно генерации}:} позволяет генерировать одинаковые массивы \\
+\item{\textbf{максимальное значение}:} максимальное число, которое может быть сгенерировано (по умолчанию \textbf{RAND\_MAX}) \\
+\item{\textbf{генерировать отрицательные числа}:} 1 (значение по умолчанию) - генерировать отрицательные числа (максимальное значние будет при этом уменьшено вдвое), 0 - запретить генерацию отрицательных чисел\\
+\end{enumerate}
+
+
+
+\Section{Спецификация системы}
+
+\noindent
+POLUS \\
+Модель процессора: IBM POWER8\\
+Размер линии кэша L1: 128 bytes\\
+Размер кэша L1: 64K\\
+Размер кэша L2: 512K\\
+
+\noindent
+
+\Section{Результаты выполнения}
+
+\begin{table}[h]
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+Режим   & L1 Cache misses & L2 Cache misses & L1 theor & L1 theor / L1 Cache misses \\ \hline
+\rowcolor[HTML]{FFF2CC} 
+0 (ijk) & 1,66E+09        & 3,53E+07        & 1,03E+09 & 0,62                       \\ \hline
+\rowcolor[HTML]{E2EFDA} 
+1 (ikj) & 2,33E+07        & 6,59E+05        & 6,25E+07 & 2,68                       \\ \hline
+\rowcolor[HTML]{E2EFDA} 
+2 (kij) & 2,76E+07        & 1,72E+06        & 6,25E+07 & 2,26                       \\ \hline
+\rowcolor[HTML]{FFF2CC} 
+3 (jik) & 1,66E+09        & 3,30E+07        & 1,03E+09 & 0,62                       \\ \hline
+\rowcolor[HTML]{D9E1F2} 
+4 (jki) & 3,19E+09        & 1,26E+08        & 2,00E+09 & 0,63                       \\ \hline
+\rowcolor[HTML]{D9E1F2} 
+5 (kji) & 3,19E+09        & 1,26E+08        & 2,00E+09 & 0,63                       \\ \hline
+\end{tabular}
+\end{table}
+
+
+\end{document}
