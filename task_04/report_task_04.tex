@@ -1,0 +1,102 @@
+\documentclass[12pt,a4paper,oneside,final]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+\usepackage{graphicx} % \includegraphics
+\usepackage{indentfirst}
+
+\oddsidemargin = 0cm
+\topmargin = -1.5cm
+\textwidth = 16cm
+\textheight = 24cm
+\parindent = 0.5cm
+
+\newcommand\Section[1]{
+  \refstepcounter{section}
+  \section*{\raggedright
+    \arabic{section}. #1}
+  \addcontentsline{toc}{section}{%
+    \arabic{section}. #1}
+}
+
+\newcommand\Subsection[1]{
+  \refstepcounter{subsection}
+  \subsection*{\raggedright
+    \arabic{section}.\arabic{subsection}. #1
+  }
+  \addcontentsline{toc}{subsection}{%
+    \arabic{section}.\arabic{subsection}. #1}
+}
+
+\newcommand\Subsubsection[1]{
+  \refstepcounter{subsubsection}
+  \subsubsection*{\raggedright
+    \arabic{section}.\arabic{subsection}.\arabic{subsubsection}. #1
+  }
+  \addcontentsline{toc}{subsubsection}{%
+    \arabic{section}.\arabic{subsection}.\arabic{subsubsection}. #1}
+}
+
+\sloppy
+
+\title{Задание 4 \\
+  Параллельная сортировка слиянием \\
+  Отчёт}
+\author{Кучеров\,В.Д.}
+\date{2022}
+
+\begin{document}
+
+\maketitle
+
+\Section{Постановка задачи}
+
+Реализовать параллельный алгоритм сортировки слиянием с использованием программного интерфейса POSIX Threads. Массив для сортировки считывается из входного файла. Массив разбивается на подмассивы (чанки), каждый чанк сортируется последовательно, слияние чанков происходит параллельно. На вход программа должна принимать имя входного файла-массива, имя выходного файла-массива, натуральное число p, где p — число нитей (POSIX Threads), проводящих непосредственно сортировку чанков. Составить график зависимости T (p) (время), S (p) (ускорение) при фиксированном входном массиве размера n = 100 000 000.
+
+\Section{Реализация}
+В ходе работы были реализованы три программы: thread\_merge\_sort.cpp is\_sorted.cpp  array\_generator.cpp, отвечающие соответственно за сортировку, проверку отсортированности массива, генерацию массива. Был выбран рекурсивный алгоритм сортировки:
+\begin{enumerate}
+    \item Разбиение массива на чанки
+    \item Запускается сначала один поток, которому передаются все чанки
+    \item Если в функцию передан один чанк, то производится сортировка стандартными средствами языка и возвращается отсортированный чанк.
+    \item Иначе, полученные чанки разбиваются на две группы, каждая из которых сортируется в новом потоке. После происходит слияние двух полученных отсортированных массивов.
+\end{enumerate}
+
+\Section{Формат коммандной строки}
+
+\begin{verbatim}
+./thread_merge_sort <входной_файл_массив> <выходной_файл_массив> <число_нитей>
+./is_sorted <входной_файл_массив>
+./array_generator <количество_элементов> <выходной_файл_массив> <ядро_генерации>
+\end{verbatim}
+
+\Section{Спецификация системы}
+
+\noindent
+Процессор: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
+
+\noindent
+Число вычислительных ядер: 8
+
+\Section{Результаты выполнения}
+
+Для каждого числа нитей проводилось 3 эксперимента (3 различных массива длины 100 000 000 элементов), в таблице представлено время каждого эксперимента,
+усреднённое время и ускорение.
+
+\begin{center}
+  \begin{tabular}{|p{1.5 cm}|p{3 cm}|p{3 cm}|p{3 cm}|p{3 cm}|p{2 cm}|}
+    \hline
+    Число нитей $n$ & Эксперимент $1$ (с) & Эксперимент $2$ (с) & Эксперимент $3$ (с) & Среднее время работы (c) & Ускорение\\
+    \hline
+        1 & 7,814097 & 8,094139 & 7,868201 & 7,925 & 1,000 \\ \hline
+        2 & 4,556397 & 4,676118 & 4,651764 & 4,628 & 1,712 \\ \hline
+        3 & 3,776356 & 3,765084 & 3,795756 & 3,779 & 2,097 \\ \hline
+        4 & 3,121532 & 3,152072 & 3,122516 & 3,132 & 2,530 \\ \hline
+        5 & 3,024371 & 3,021835 & 3,013528 & 3,020 & 2,624 \\ \hline
+        6 & 2,725288 & 2,698225 & 2,766201 & 2,730 & 2,903 \\ \hline
+        7 & 2,544844 & 2,549244 & 2,529562 & 2,541 & 3,119 \\ \hline
+        8 & 2,410415 & 2,405319 & 2,393323 & 2,403 & 3,298 \\ \hline
+  \end{tabular}
+\end{center}
+\includegraphics[width=20cm]{avg_time.png}
+\includegraphics[width=20cm]{boost.png}
+\end{document}
